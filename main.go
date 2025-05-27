@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Yousseflamrani/gowatcher_TP1/internal/checker"
+	"sync"
 )
 
 func main() {
@@ -35,23 +36,22 @@ func main() {
 		"https://www.movie.review/genre/comedy",
 		"https://www.gaming.forum/topic/strategy",
 	}
-	//chanel pour recuperer les reussltat
-	results := make(chan checker.CheckResult)
 
-	//lancer les verification paralalele
+	var wg sync.WaitGroup
+
+	wg.Add(len(targets))
 
 	for _, url := range targets {
-		go checker.CheckURL(url, results)
+		go func(u string) {
+			result := checker.CheckURL(u)
+			defer wg.Done()
+			if result.Err != nil {
+				fmt.Printf("KO %s : erreur : %v\n", result.Target, result.Err)
+			} else {
+				fmt.Printf("OK %s\n", result.Target)
+			}
+		}(url)
 	}
 
-	for range targets {
-		result := <-results
-		if result.Err != nil {
-			//handle error
-			fmt.Printf("OK %s :erreur : %v\n", result.Target, result.Err)
-		} else {
-			fmt.Printf("OK %s :%s\n", result.Target, result.Status)
-		}
-
-	}
+	wg.Wait()
 }
